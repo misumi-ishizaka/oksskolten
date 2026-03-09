@@ -1,0 +1,68 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import { useTheme } from './use-theme'
+import { themes } from '../data/themes'
+
+describe('useTheme', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    // Reset inline styles on documentElement
+    document.documentElement.style.cssText = ''
+    // Clear any theme-color meta tags then add one for testing
+    document.querySelectorAll('meta[name="theme-color"]').forEach(el => el.remove())
+    const meta = document.createElement('meta')
+    meta.setAttribute('name', 'theme-color')
+    meta.setAttribute('content', '')
+    document.head.appendChild(meta)
+  })
+
+  it('defaults to "default" theme', () => {
+    const { result } = renderHook(() => useTheme(false))
+    expect(result.current.themeName).toBe('default')
+  })
+
+  it('restores theme from localStorage', () => {
+    localStorage.setItem('color-theme', 'solarized')
+    const { result } = renderHook(() => useTheme(false))
+    expect(result.current.themeName).toBe('solarized')
+  })
+
+  it('setTheme updates theme name and persists to localStorage', () => {
+    const { result } = renderHook(() => useTheme(false))
+    act(() => result.current.setTheme('tokyo-night'))
+    expect(result.current.themeName).toBe('tokyo-night')
+    expect(localStorage.getItem('color-theme')).toBe('tokyo-night')
+  })
+
+  it('returns themes array', () => {
+    const { result } = renderHook(() => useTheme(false))
+    expect(result.current.themes).toBe(themes)
+  })
+
+  it('applies CSS custom properties to document root', () => {
+    renderHook(() => useTheme(false))
+    const root = document.documentElement
+    const defaultTheme = themes.find(t => t.name === 'default')!
+    expect(root.style.getPropertyValue('--color-bg')).toBe(defaultTheme.colors.light['--color-bg'])
+  })
+
+  it('switches to dark colors when isDark is true', () => {
+    const { rerender } = renderHook(({ isDark }) => useTheme(isDark), {
+      initialProps: { isDark: false },
+    })
+    const defaultTheme = themes.find(t => t.name === 'default')!
+    const root = document.documentElement
+
+    expect(root.style.getPropertyValue('--color-bg')).toBe(defaultTheme.colors.light['--color-bg'])
+
+    rerender({ isDark: true })
+    expect(root.style.getPropertyValue('--color-bg')).toBe(defaultTheme.colors.dark['--color-bg'])
+  })
+
+  it('updates meta theme-color tag', () => {
+    renderHook(() => useTheme(false))
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const defaultTheme = themes.find(t => t.name === 'default')!
+    expect(meta?.content).toBe(defaultTheme.colors.light['--color-bg'])
+  })
+})

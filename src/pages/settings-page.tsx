@@ -120,7 +120,7 @@ function AboutTab() {
 
   return (
     <div className="flex flex-col items-center justify-center py-16 select-none">
-      <img src="/pwa-192x192.png" alt={APP_NAME} className="w-16 h-16 rounded-2xl mb-4" />
+      <img src="/v1/pwa-192x192.png" alt={APP_NAME} className="w-16 h-16 rounded-2xl mb-4" />
       <h2 className="text-lg font-bold text-text">{APP_NAME}</h2>
       <p className="text-sm text-muted mt-1">{t('about.version')} {__APP_VERSION__}</p>
 
@@ -130,7 +130,7 @@ function AboutTab() {
             <p>
               {t('about.commit')}{' '}
               <a
-                href={`https://github.com/babarot/oksskolten/commit/${commit}`}
+                href={`https://github.com/babarot/reader/commit/${commit}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent hover:underline font-mono"
@@ -146,7 +146,7 @@ function AboutTab() {
 
       <div className="flex gap-4 mt-4">
         <a
-          href="https://github.com/babarot/oksskolten"
+          href="https://github.com/babarot/reader"
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent hover:underline text-sm inline-flex items-center gap-1"
@@ -155,7 +155,7 @@ function AboutTab() {
           <ExternalLink size={12} />
         </a>
         <a
-          href="https://github.com/babarot/oksskolten/issues"
+          href="https://github.com/babarot/reader/issues"
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent hover:underline text-sm inline-flex items-center gap-1"
