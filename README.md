@@ -134,12 +134,12 @@ The feed fetcher minimizes bandwidth and adapts to each feed's behavior, inspire
 ## Development
 
 ```bash
-docker compose up        # HMR enabled
+docker compose up --build   # HMR enabled
 # Frontend: http://localhost:5173
 # Backend:  http://localhost:3000
 
-npm test                 # Run all tests
-npm run build            # Production build
+npm test                    # Run all tests
+npm run build               # Production build
 ```
 
 On first startup with an empty database, sample feeds and articles are automatically loaded from the demo seed data (`src/lib/demo/seed/*.json`). This gives you a populated UI to work with immediately. The seed is idempotent — it only runs when no RSS feeds exist in the database. To start with an empty database instead, set `NO_SEED=1`.
@@ -152,7 +152,7 @@ Runs anywhere Docker runs — a home NAS, a Raspberry Pi, or a cloud VM.
 
 ```bash
 # Production with Cloudflare Tunnel
-docker compose -f compose.yaml -f compose.prod.yaml up -d
+docker compose -f compose.yaml -f compose.prod.yaml up --build -d
 ```
 
 The production compose file includes a `cloudflared` sidecar that exposes the app via Cloudflare Tunnel — no port forwarding or static IP required.
