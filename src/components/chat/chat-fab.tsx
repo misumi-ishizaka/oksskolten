@@ -31,6 +31,16 @@ export function ChatFab({ articleId }: ChatFabProps) {
     }
   }, [hasConversations])
 
+  // Close panel when viewport shrinks below md breakpoint
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const handler = (e: MediaQueryListEvent) => {
+      if (!e.matches) setPanelOpen(false)
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const handleToggle = () => {
     setPanelOpen(prev => !prev)
     if (!mounted) setMounted(true)
