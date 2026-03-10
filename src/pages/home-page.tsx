@@ -96,7 +96,7 @@ export function HomePage() {
   if (!hasMessages && !streaming) {
     return (
       <div className="relative min-h-[calc(100dvh-var(--header-height))]">
-      <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-var(--header-height))] px-4 -mt-36">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-var(--header-height))] px-4 -mt-12 sm:-mt-36">
           {/* Greeting */}
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 mb-4">
             <img src="/icons/favicon-black.png" alt="" className="h-10 w-10 sm:h-14 sm:w-14 dark:hidden" />
