@@ -32,6 +32,14 @@ export interface AppLayoutContext {
 function AppLayout() {
   const settings = useSettings()
   const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia(`(min-width: ${MD_BREAKPOINT}px)`).matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${MD_BREAKPOINT}px)`)
+    const handler = (e: MediaQueryListEvent) => setSidebarOpen(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   useSwipeDrawer(sidebarOpen, setSidebarOpen)
 
   const { data: profile } = useSWR<{ language: string | null }>('/api/settings/profile', fetcher)
