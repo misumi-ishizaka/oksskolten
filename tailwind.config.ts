@@ -8,13 +8,15 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          'Source Sans 3',
           'ui-sans-serif',
           'system-ui',
           '-apple-system',
           'sans-serif',
         ],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-        logo: ['Palatino', 'Palatino Linotype', 'Book Antiqua', 'Georgia', 'serif'],
+        // TeX Gyre Pagella is an open-source Palatino clone
+        logo: ['TeX Gyre Pagella', 'Palatino', 'Palatino Linotype', 'Book Antiqua', 'Georgia', 'serif'],
       },
       colors: {
         // Existing project tokens
