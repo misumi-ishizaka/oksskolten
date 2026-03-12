@@ -8,6 +8,9 @@
  * When TOOL_LOG_PATH is set, tool execution results are appended to that file
  * so the Claude Code adapter can reconstruct tool_use/tool_result blocks.
  */
+import { logger } from '../logger.js'
+
+const log = logger.child('mcp-server')
 
 import fs from 'node:fs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -15,7 +18,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { TOOLS } from './tools.js'
 
-console.error('[mcp-server] boot', {
+log.error('boot', {
   pid: process.pid,
   toolCount: TOOLS.length,
   toolLogPath: process.env.TOOL_LOG_PATH ?? null,
@@ -65,7 +68,7 @@ const server = new McpServer({ name: 'oksskolten', version: '1.0.0' })
 for (const tool of TOOLS) {
   const shape = jsonSchemaToZod(tool.inputSchema)
   server.tool(tool.name, tool.description, shape, async (input) => {
-    console.error('[mcp-server] tool start', { name: tool.name, input })
+    log.error('tool start', { name: tool.name, input })
     const result = await tool.execute(input as Record<string, unknown>)
 
     // Log tool execution for the Claude Code adapter to reconstruct
@@ -76,12 +79,12 @@ for (const tool of TOOLS) {
       )
     }
 
-    console.error('[mcp-server] tool done', { name: tool.name })
+    log.error('tool done', { name: tool.name })
     return { content: [{ type: 'text' as const, text: result }] }
   })
 }
 
 const transport = new StdioServerTransport()
-console.error('[mcp-server] connecting stdio transport', { pid: process.pid })
+log.error('connecting stdio transport', { pid: process.pid })
 await server.connect(transport)
-console.error('[mcp-server] connected stdio transport', { pid: process.pid })
+log.error('connected stdio transport', { pid: process.pid })

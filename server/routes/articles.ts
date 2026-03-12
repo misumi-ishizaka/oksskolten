@@ -1,6 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { startSSE } from '../lib/sse.js'
+import { logger } from '../logger.js'
+
+const log = logger.child('search')
 import {
   getArticles,
   getArticleByUrl,
@@ -253,7 +256,7 @@ export async function articleRoutes(api: FastifyInstance): Promise<void> {
       const articles = getArticlesByIds(ids)
       reply.send({ articles })
     } catch (err) {
-      console.error('[search] Meilisearch query failed:', err)
+      log.error('Meilisearch query failed:', err)
       reply.send({ articles: [] })
     }
   })

@@ -1,5 +1,8 @@
 import { getSearchClient, ARTICLES_INDEX, ARTICLES_STAGING_INDEX, type MeiliArticleDoc } from './client.js'
 import { getDb } from '../db/connection.js'
+import { logger } from '../logger.js'
+
+const log = logger.child('search')
 
 // --- State ---
 
@@ -33,7 +36,7 @@ const BATCH_SIZE = 1000
 
 export async function rebuildSearchIndex(): Promise<void> {
   if (rebuilding) {
-    console.log('[search] Rebuild already in progress, skipping')
+    log.info('Rebuild already in progress, skipping')
     return
   }
   rebuilding = true
@@ -105,10 +108,10 @@ export async function rebuildSearchIndex(): Promise<void> {
 
     searchReady = true
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1)
-    console.log(`[search] Index rebuild complete: ${rows.length} articles in ${elapsed}s`)
+    log.info(`Index rebuild complete: ${rows.length} articles in ${elapsed}s`)
   } catch (err) {
     // On failure: keep searchReady as-is (true if previously built, false if first time)
-    console.error('[search] Index rebuild failed:', err)
+    log.error('Index rebuild failed:', err)
   } finally {
     changeLog = null
     rebuilding = false
@@ -122,14 +125,14 @@ export function syncArticleToSearch(doc: MeiliArticleDoc): void {
     const client = getSearchClient()
     const index = client.index(ARTICLES_INDEX)
     index.addDocuments([doc]).catch((err) => {
-      console.error('[search] Failed to sync article:', err)
+      log.error('Failed to sync article:', err)
     })
 
     if (changeLog) {
       changeLog.push({ action: 'upsert', id: doc.id, doc })
     }
   } catch (err) {
-    console.error('[search] Failed to sync article:', err)
+    log.error('Failed to sync article:', err)
   }
 }
 
@@ -138,14 +141,14 @@ export function deleteArticleFromSearch(id: number): void {
     const client = getSearchClient()
     const index = client.index(ARTICLES_INDEX)
     index.deleteDocument(id).catch((err) => {
-      console.error('[search] Failed to delete article from index:', err)
+      log.error('Failed to delete article from index:', err)
     })
 
     if (changeLog) {
       changeLog.push({ action: 'delete', id })
     }
   } catch (err) {
-    console.error('[search] Failed to delete article from index:', err)
+    log.error('Failed to delete article from index:', err)
   }
 }
 
@@ -154,10 +157,10 @@ export function syncArticleScoreToSearch(id: number, score: number): void {
     const client = getSearchClient()
     const index = client.index(ARTICLES_INDEX)
     index.updateDocuments([{ id, score }]).catch((err) => {
-      console.error('[search] Failed to sync score:', err)
+      log.error('Failed to sync score:', err)
     })
   } catch (err) {
-    console.error('[search] Failed to sync score:', err)
+    log.error('Failed to sync score:', err)
   }
 }
 
@@ -167,7 +170,7 @@ export function deleteArticlesByFeedFromSearch(articleIds: number[]): void {
     const client = getSearchClient()
     const index = client.index(ARTICLES_INDEX)
     index.deleteDocuments({ filter: `id IN [${articleIds.join(',')}]` }).catch((err) => {
-      console.error('[search] Failed to batch delete articles:', err)
+      log.error('Failed to batch delete articles:', err)
     })
 
     if (changeLog) {
@@ -176,7 +179,7 @@ export function deleteArticlesByFeedFromSearch(articleIds: number[]): void {
       }
     }
   } catch (err) {
-    console.error('[search] Failed to batch delete articles:', err)
+    log.error('Failed to batch delete articles:', err)
   }
 }
 
@@ -186,7 +189,7 @@ export function syncArticlesByFeedToSearch(docs: MeiliArticleDoc[]): void {
     const client = getSearchClient()
     const index = client.index(ARTICLES_INDEX)
     index.addDocuments(docs).catch((err) => {
-      console.error('[search] Failed to batch sync articles:', err)
+      log.error('Failed to batch sync articles:', err)
     })
 
     if (changeLog) {
@@ -195,6 +198,6 @@ export function syncArticlesByFeedToSearch(docs: MeiliArticleDoc[]): void {
       }
     }
   } catch (err) {
-    console.error('[search] Failed to batch sync articles:', err)
+    log.error('Failed to batch sync articles:', err)
   }
 }

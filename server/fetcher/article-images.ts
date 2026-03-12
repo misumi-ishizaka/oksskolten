@@ -5,6 +5,9 @@ import { safeFetch } from './ssrf.js'
 import { USER_AGENT } from './http.js'
 import { getSetting } from '../db/settings.js'
 import { updateArticleContent, markImagesArchived, clearImagesArchived } from '../db/articles.js'
+import { logger } from '../logger.js'
+
+const log = logger.child('fetcher')
 
 // Default images directory, can be overridden by settings
 function getImagesDir(): string {
@@ -97,19 +100,19 @@ async function uploadImageToRemote(
     })
 
     if (!res.ok) {
-      console.warn(`Remote image upload failed: ${res.status}`)
+      log.warn(`Remote image upload failed: ${res.status}`)
       return null
     }
 
     const json = await res.json()
     const url = extractByDotPath(json, config.respPath)
     if (!url || typeof url !== 'string') {
-      console.warn(`Could not extract URL from remote response at path "${config.respPath}"`)
+      log.warn(`Could not extract URL from remote response at path "${config.respPath}"`)
       return null
     }
     return url
   } catch (err) {
-    console.warn('Remote image upload error:', err)
+    log.warn('Remote image upload error:', err)
     return null
   }
 }

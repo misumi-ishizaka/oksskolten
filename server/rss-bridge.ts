@@ -6,6 +6,9 @@ import { getSetting } from './db.js'
 import { getProvider } from './providers/llm/index.js'
 import { DEFAULT_MODELS } from '../shared/models.js'
 import type { LLMProvider } from './providers/llm/provider.js'
+import { logger } from './logger.js'
+
+const log = logger.child('rss-bridge')
 
 const RSS_BRIDGE_URL = process.env.RSS_BRIDGE_URL
 
@@ -193,14 +196,14 @@ export async function inferCssSelectorBridge(url: string): Promise<string | null
     const { stripCustomBridgeParams } = await import('./fetcher/css-bridge.js')
     const validation = await validateBridgeFeed(stripCustomBridgeParams(bridgeUrl), url)
     if (validation === 'invalid') {
-      console.log(`[rss-bridge] CssSelectorBridge validation failed for ${url} (selector="${selector}")`)
+      log.info(`CssSelectorBridge validation failed for ${url} (selector="${selector}")`)
       return null
     }
 
-    console.log(`[rss-bridge] CssSelectorBridge inferred for ${url}: url="${selector}" title="${titleSelector ?? 'none'}" content="${contentSelector ?? 'none'}"`)
+    log.info(`CssSelectorBridge inferred for ${url}: url="${selector}" title="${titleSelector ?? 'none'}" content="${contentSelector ?? 'none'}"`)
     return bridgeUrl
   } catch (err) {
-    console.error('[rss-bridge] inferCssSelectorBridge failed:', err)
+    log.error('inferCssSelectorBridge failed:', err)
     return null
   }
 }
@@ -260,7 +263,7 @@ async function validateBridgeFeed(bridgeUrl: string, originalUrl: string): Promi
     return matchCount >= 1 && domainMatchCount >= 1 ? 'valid' : 'invalid'
   } catch (err) {
     // Connection refused / timeout — Bridge is unreachable, trust LLM output
-    console.log(`[rss-bridge] Bridge unreachable during validation, trusting LLM output`)
+    log.info('Bridge unreachable during validation, trusting LLM output')
     return 'unreachable'
   }
 }

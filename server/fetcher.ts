@@ -18,6 +18,9 @@ import { fetchFullText, isBotBlockPage } from './fetcher/content.js'
 import { type FetchRssResult, fetchAndParseRss, RateLimitError } from './fetcher/rss.js'
 import { computeInterval, computeEmpiricalInterval, sqliteFuture, DEFAULT_INTERVAL } from './fetcher/schedule.js'
 import { detectLanguage } from './fetcher/ai.js'
+import { logger } from './logger.js'
+
+const log = logger.child('fetcher')
 
 // --- Re-exports (preserve existing import sites) ---
 export { normalizeDate } from './fetcher/util.js'
@@ -111,7 +114,7 @@ async function processArticle(task: ArticleTask): Promise<void> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (!msg.includes('UNIQUE constraint failed')) {
-        console.warn(`[fetcher] insertArticle failed for ${task.url}: ${msg}`)
+        log.warn(`insertArticle failed for ${task.url}: ${msg}`)
       }
     }
   } else {
@@ -141,12 +144,12 @@ export async function fetchSingleFeed(
     updateFeedCacheHeaders(feed.id, rssResult.etag, rssResult.lastModified, rssResult.contentHash)
   } catch (err) {
     if (err instanceof RateLimitError) {
-      console.warn(`[fetcher] Feed ${feed.name}: ${err.message}`)
+      log.warn(`Feed ${feed.name}: ${err.message}`)
       updateFeedRateLimit(feed.id, err.retryAfterSeconds)
       return
     }
     const msg = errorMessage(err)
-    console.error(`[fetcher] Feed ${feed.name}: ${msg}`)
+    log.error(`Feed ${feed.name}: ${msg}`)
     updateFeedError(feed.id, msg)
     return
   }
@@ -155,7 +158,7 @@ export async function fetchSingleFeed(
     // Reschedule using stored interval (or default)
     const interval = feed.check_interval ?? DEFAULT_INTERVAL
     updateFeedSchedule(feed.id, sqliteFuture(interval), interval)
-    console.log(`[fetcher] Feed ${feed.name}: not modified (304)`)
+    log.info(`Feed ${feed.name}: not modified (304)`)
     return
   }
 
@@ -181,7 +184,7 @@ export async function fetchSingleFeed(
     }))
 
   if (tasks.length === 0) {
-    console.log(`[fetcher] Feed ${feed.name}: no new articles`)
+    log.info(`Feed ${feed.name}: no new articles`)
     return
   }
 
@@ -192,7 +195,7 @@ export async function fetchSingleFeed(
   emitProgress(foundEvent)
   onProgress?.(foundEvent)
 
-  console.log(`[fetcher] Feed ${feed.name}: processing ${total} articles`)
+  log.info(`Feed ${feed.name}: processing ${total} articles`)
   await Promise.all(
     tasks.map(task =>
       semaphore.run(async () => {
@@ -205,7 +208,7 @@ export async function fetchSingleFeed(
             onProgress?.(doneEvent)
           }
         } catch (err) {
-          console.error('[fetcher] Article error:', err)
+          log.error('Article error:', err)
           if (task.kind === 'new') {
             fetched++
             const doneEvent: FetchProgressEvent = { type: 'article-done', feed_id: feed.id, fetched, total }
@@ -222,7 +225,7 @@ export async function fetchSingleFeed(
   emitProgress(completeEvent)
   onProgress?.(completeEvent)
 
-  console.log(`[fetcher] Feed ${feed.name}: done`)
+  log.info(`Feed ${feed.name}: done`)
 }
 
 // --- Main entry point ---
@@ -250,7 +253,7 @@ export async function fetchAllFeeds(
           if (rssResult.notModified) {
             const interval = feed.check_interval ?? DEFAULT_INTERVAL
             updateFeedSchedule(feed.id, sqliteFuture(interval), interval)
-            console.log(`[fetcher] Feed ${feed.name}: not modified (304)`)
+            log.info(`Feed ${feed.name}: not modified (304)`)
             feedNewCounts.set(feed.id, 0)
             return
           }
@@ -280,12 +283,12 @@ export async function fetchAllFeeds(
           feedNewCounts.set(feed.id, newItems.length)
         } catch (err) {
           if (err instanceof RateLimitError) {
-            console.warn(`[fetcher] Feed ${feed.name}: ${err.message}`)
+            log.warn(`Feed ${feed.name}: ${err.message}`)
             updateFeedRateLimit(feed.id, err.retryAfterSeconds)
             return
           }
           const msg = errorMessage(err)
-          console.error(`[fetcher] Feed ${feed.name}: ${msg}`)
+          log.error(`Feed ${feed.name}: ${msg}`)
           updateFeedError(feed.id, msg)
         }
       }),
@@ -299,14 +302,14 @@ export async function fetchAllFeeds(
   }
 
   if (allTasks.length === 0) {
-    console.log('[fetcher] No articles to process')
+    log.info('No articles to process')
     return
   }
 
   const newCount = allTasks.filter(t => t.kind === 'new').length
   const retryCount = allTasks.filter(t => t.kind === 'retry').length
-  console.log(
-    `[fetcher] Processing ${allTasks.length} articles (${newCount} new, ${retryCount} retry)`,
+  log.info(
+    `Processing ${allTasks.length} articles (${newCount} new, ${retryCount} retry)`,
   )
 
   // Emit feed-articles-found for each feed with new articles
@@ -328,7 +331,7 @@ export async function fetchAllFeeds(
         try {
           await processArticle(task)
         } catch (err) {
-          console.error('[fetcher] Article error:', err)
+          log.error('Article error:', err)
         }
         if (task.kind === 'new') {
           const feedId = task.feed_id
@@ -354,5 +357,5 @@ export async function fetchAllFeeds(
     }
   }
 
-  console.log('[fetcher] Batch complete')
+  log.info('Batch complete')
 }

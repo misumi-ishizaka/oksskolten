@@ -2,6 +2,9 @@ import type { FastifyInstance } from 'fastify'
 import type { Feed } from '../../shared/types.js'
 import { z } from 'zod'
 import { startSSE } from '../lib/sse.js'
+import { logger } from '../logger.js'
+
+const log = logger.child('api')
 import {
   getFeeds,
   getFeedById,
@@ -139,7 +142,7 @@ export async function feedRoutes(api: FastifyInstance): Promise<void> {
         // Fire-and-forget: fetch articles for the new feed
         if (feed.rss_url || feed.rss_bridge_url) {
           fetchSingleFeed(feed).catch(err => {
-            console.error(`[api] Initial fetch for ${feed.name} failed:`, err)
+            log.error(`Initial fetch for ${feed.name} failed:`, err)
           })
         }
 
@@ -287,7 +290,7 @@ export async function feedRoutes(api: FastifyInstance): Promise<void> {
       const refreshedFeed = getFeedById(params.id)
       if (refreshedFeed && (rssUrl || rssBridgeUrl)) {
         fetchSingleFeed(refreshedFeed).catch(err => {
-          console.error(`[api] Re-detect fetch for ${refreshedFeed.name} failed:`, err)
+          log.error(`Re-detect fetch for ${refreshedFeed.name} failed:`, err)
         })
       }
 
@@ -400,7 +403,7 @@ export async function feedRoutes(api: FastifyInstance): Promise<void> {
     for (const feed of importedFeeds) {
       if (feed.rss_url) {
         fetchSingleFeed(feed).catch(err => {
-          console.error(`[opml] Initial fetch for ${feed.name} failed:`, err)
+          log.error(`OPML: Initial fetch for ${feed.name} failed:`, err)
         })
       }
     }

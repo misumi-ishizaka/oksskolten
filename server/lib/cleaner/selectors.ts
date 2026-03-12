@@ -1,4 +1,7 @@
 import { JSDOM } from 'jsdom'
+import { logger } from '../../logger.js'
+
+const log = logger.child('cleaner')
 
 // ---------------------------------------------------------------------------
 // PRE_CLEAN_SELECTORS — Safe to remove before Readability.
@@ -843,7 +846,7 @@ function validateSelectorsOnce(selectors: string[], label: string): string[] {
       doc.querySelectorAll(sel)
       valid.push(sel)
     } catch {
-      console.warn(`[cleaner] Invalid selector in ${label}, skipping: ${sel}`)
+      log.warn(`Invalid selector in ${label}, skipping: ${sel}`)
     }
   }
 
@@ -858,7 +861,7 @@ function validatePartialPatternsOnce(patterns: string[], label: string): string[
       new RegExp(p, 'i')
       valid.push(p)
     } catch {
-      console.warn(`[cleaner] Invalid pattern in ${label}, skipping: ${p}`)
+      log.warn(`Invalid pattern in ${label}, skipping: ${p}`)
     }
   }
 

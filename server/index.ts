@@ -8,6 +8,9 @@ import rateLimit from '@fastify/rate-limit'
 import multipart from '@fastify/multipart'
 import cron, { type ScheduledTask } from 'node-cron'
 import { runMigrations, getSetting, upsertSetting, getOrCreateJwtSecret, ensureClipFeed, recalculateScores } from './db.js'
+import { logger } from './logger.js'
+
+const log = logger
 import { getDb } from './db/connection.js'
 import { registerApi } from './api.js'
 import { registerChatApi } from './chatRoutes.js'
@@ -19,7 +22,7 @@ import { rebuildSearchIndex, isSearchReady } from './search/sync.js'
 
 // --- Startup guards ---
 if (process.env.AUTH_DISABLED === '1' && process.env.NODE_ENV !== 'development') {
-  console.error('FATAL: AUTH_DISABLED is only allowed when NODE_ENV=development')
+  log.error('FATAL: AUTH_DISABLED is only allowed when NODE_ENV=development')
   process.exit(1)
 }
 
@@ -45,7 +48,7 @@ if (envSecret) {
   const dbSecret = getSetting('system.jwt_secret')
   if (!dbSecret) {
     upsertSetting('system.jwt_secret', envSecret)
-    console.log('Migrated JWT_SECRET from env var to database')
+    log.info('Migrated JWT_SECRET from env var to database')
   }
 }
 
@@ -153,18 +156,18 @@ let activeFetchPromise: Promise<void> | null = null
 
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/5 * * * *'
 cronTasks.push(cron.schedule(CRON_SCHEDULE, async () => {
-  console.log('[cron] Feed fetch triggered')
+  log.info('[cron] Feed fetch triggered')
   const p = (async () => {
     try {
       await fetchAllFeeds()
     } catch (err) {
-      console.error('[cron] Feed fetch error:', err)
+      log.error('[cron] Feed fetch error:', err)
     }
     try {
       const { updated } = recalculateScores()
-      console.log(`[cron] Scores recalculated: ${updated} articles`)
+      log.info(`[cron] Scores recalculated: ${updated} articles`)
     } catch (err) {
-      console.error('[cron] Score recalculation error:', err)
+      log.error('[cron] Score recalculation error:', err)
     }
   })()
   activeFetchPromise = p
@@ -183,18 +186,18 @@ void (async () => {
       await rebuildSearchIndex()
       return
     } catch (err) {
-      console.error(`[search] Index rebuild attempt failed (next retry in ${retries[retries.indexOf(delay) + 1] ?? 'none'}ms):`, err)
+      log.error(`[search] Index rebuild attempt failed (next retry in ${retries[retries.indexOf(delay) + 1] ?? 'none'}ms):`, err)
     }
   }
-  console.error('[search] All initial rebuild attempts failed, will retry on next 6h cron')
+  log.error('[search] All initial rebuild attempts failed, will retry on next 6h cron')
 })()
 
 cronTasks.push(cron.schedule('0 */6 * * *', async () => {
-  console.log('[cron] Search index rebuild triggered')
+  log.info('[cron] Search index rebuild triggered')
   try {
     await rebuildSearchIndex()
   } catch (err) {
-    console.error('[cron] Search index rebuild error:', err)
+    log.error('[cron] Search index rebuild error:', err)
   }
 }))
 

@@ -4,6 +4,9 @@ import os from 'node:os'
 import path from 'node:path'
 import type { Message, TextBlock, ToolUseBlock, ToolResultBlock } from './types.js'
 import type { ChatTurnParams, RunChatTurnResult } from './adapter.js'
+import { logger } from '../logger.js'
+
+const log = logger.child('claude-code')
 
 const CLAUDE_CODE_TIMEOUT_MS = 90_000
 
@@ -87,12 +90,12 @@ export async function runClaudeCodeTurn(params: ChatTurnParams): Promise<RunChat
 
   return new Promise<RunChatTurnResult>((resolve, reject) => {
     if (!fs.existsSync(tsxCliPath)) {
-      console.error('[claude-code] tsx CLI not found', { tsxCliPath })
+      log.error('tsx CLI not found', { tsxCliPath })
       reject(new Error(`tsx CLI not found at ${tsxCliPath}`))
       return
     }
 
-    console.error('[claude-code] spawn start', {
+    log.error('spawn start', {
       model,
       mcpCommand: process.execPath,
       mcpArgs: [tsxCliPath, mcpServerPath],
@@ -104,7 +107,7 @@ export async function runClaudeCodeTurn(params: ChatTurnParams): Promise<RunChat
       stdio: ['pipe', 'pipe', 'pipe'],
     })
 
-    console.error('[claude-code] spawned', { pid: proc.pid ?? null })
+    log.error('spawned', { pid: proc.pid ?? null })
     proc.stdin.write(prompt)
     proc.stdin.end()
 
@@ -126,7 +129,7 @@ export async function runClaudeCodeTurn(params: ChatTurnParams): Promise<RunChat
       if (timeoutId) clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {
         timeoutMessage = `Claude Code timed out after ${Math.round(CLAUDE_CODE_TIMEOUT_MS / 1000)}s`
-        console.error('[claude-code] timeout', { pid: proc.pid ?? null, timeoutMs: CLAUDE_CODE_TIMEOUT_MS })
+        log.error('timeout', { pid: proc.pid ?? null, timeoutMs: CLAUDE_CODE_TIMEOUT_MS })
         proc.kill('SIGKILL')
       }, CLAUDE_CODE_TIMEOUT_MS)
     }
@@ -137,7 +140,7 @@ export async function runClaudeCodeTurn(params: ChatTurnParams): Promise<RunChat
       refreshTimeout()
       if (!sawStdout) {
         sawStdout = true
-        console.error('[claude-code] first stdout chunk', {
+        log.error('first stdout chunk', {
           pid: proc.pid ?? null,
           bytes: chunk.length,
           preview: chunk.toString().slice(0, 500),
@@ -170,20 +173,20 @@ export async function runClaudeCodeTurn(params: ChatTurnParams): Promise<RunChat
       if (text) {
         if (!sawStderr) {
           sawStderr = true
-          console.error('[claude-code] first stderr chunk', {
+          log.error('first stderr chunk', {
             pid: proc.pid ?? null,
             bytes: chunk.length,
             preview: text.slice(0, 500),
           })
         }
         stderrText = [stderrText, text].filter(Boolean).join('\n').slice(-4000)
-        console.error('[claude-code stderr]', text)
+        log.error('stderr', text)
       }
     })
 
     proc.on('close', (code) => {
       if (timeoutId) clearTimeout(timeoutId)
-      console.error('[claude-code] close', {
+      log.error('close', {
         pid: proc.pid ?? null,
         code,
         sawStdout,
@@ -228,7 +231,7 @@ export async function runClaudeCodeTurn(params: ChatTurnParams): Promise<RunChat
     })
 
     proc.on('error', (err) => {
-      console.error('[claude-code] process error', {
+      log.error('process error', {
         pid: proc.pid ?? null,
         message: err.message,
       })
@@ -361,7 +364,7 @@ function handleStreamEvent(
   const eventType = typeof event?.type === 'string' ? event.type : 'unknown'
   if (!loggedUnhandledEventTypes.has(eventType)) {
     loggedUnhandledEventTypes.add(eventType)
-    console.error('[claude-code] unhandled event type', {
+    log.error('unhandled event type', {
       type: eventType,
       preview: JSON.stringify(event).slice(0, 500),
     })

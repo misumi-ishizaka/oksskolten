@@ -2,6 +2,9 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import Database from 'libsql'
+import { logger } from '../logger.js'
+
+const log = logger.child('db')
 
 // --- DB instance ---
 
@@ -89,7 +92,7 @@ function execSafe(sql: string, file: string) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('duplicate column name') || msg.includes('no such column')) {
-        console.warn(`Migration ${file}: skipping statement (${msg})`)
+        log.warn(`Migration ${file}: skipping statement (${msg})`)
       } else {
         throw err
       }
@@ -130,10 +133,10 @@ export function runMigrations() {
         // Column already exists from a partially-applied migration.
         // Strip the ALTER TABLE ADD COLUMN statement and re-run the rest.
         const remaining = sql.replace(/ALTER TABLE \w+ ADD COLUMN [^;]+;/g, '')
-        console.warn(`Migration ${file}: column already exists, running remaining statements`)
+        log.warn(`Migration ${file}: column already exists, running remaining statements`)
         execSafe(remaining, file)
       } else if (msg.includes('no such column')) {
-        console.warn(`Migration ${file}: column already dropped, running safe statements`)
+        log.warn(`Migration ${file}: column already dropped, running safe statements`)
         execSafe(sql, file)
       } else {
         throw err
@@ -141,6 +144,6 @@ export function runMigrations() {
     }
     if (!remote) db.pragma('foreign_keys = ON')
     db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file)
-    console.log(`Migration applied: ${file}`)
+    log.info(`Migration applied: ${file}`)
   }
 }

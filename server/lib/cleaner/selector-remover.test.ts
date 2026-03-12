@@ -1,6 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { JSDOM } from 'jsdom'
 import { removeBySelectors } from './selector-remover.js'
+
+// Suppress jsdom "Could not parse CSS stylesheet" warnings
+vi.spyOn(console, 'error').mockImplementation(() => {})
 
 function doc(html: string): Document {
   return new JSDOM(`<!DOCTYPE html><html><body>${html}</body></html>`).window.document

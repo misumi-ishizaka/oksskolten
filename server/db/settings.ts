@@ -1,5 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import { getDb } from './connection.js'
+import { logger } from '../logger.js'
+
+const log = logger.child('db')
 
 export function getSetting(key: string): string | undefined {
   const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined
@@ -19,6 +22,6 @@ export function getOrCreateJwtSecret(): string {
   if (existing) return existing
   const secret = randomBytes(64).toString('base64url')
   upsertSetting('system.jwt_secret', secret)
-  console.log('Generated new JWT secret and persisted to database')
+  log.info('Generated new JWT secret and persisted to database')
   return secret
 }

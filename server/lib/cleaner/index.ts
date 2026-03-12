@@ -2,6 +2,9 @@ import { buildPipelineConfig, TEST_ATTRIBUTES, ALLOWED_EMPTY_ELEMENTS, type Clea
 import { removeBySelectors } from './selector-remover.js'
 import { scoreAndRemoveNonContent } from './content-scorer.js'
 import { normalizeHtml } from './html-normalizer.js'
+import { logger } from '../../logger.js'
+
+const log = logger.child('cleaner')
 
 /**
  * Lightweight pre-clean before Readability.
@@ -15,7 +18,7 @@ export function preClean(doc: Document, config?: CleanerConfig): void {
 
     removeBySelectors(doc, { exactSelectors: preCleanSelectors })
   } catch (err) {
-    console.warn('[cleaner] preClean failed, continuing with original HTML:', err)
+    log.warn('preClean failed, continuing with original HTML:', err)
   }
 }
 
@@ -61,6 +64,6 @@ export function postClean(doc: Document, config?: CleanerConfig): void {
       }
     }
   } catch (err) {
-    console.warn('[cleaner] postClean failed, continuing with Readability output:', err)
+    log.warn('postClean failed, continuing with Readability output:', err)
   }
 }

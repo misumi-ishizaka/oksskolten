@@ -2,6 +2,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getDb } from './db/connection.js'
+import { logger } from './logger.js'
+
+const log = logger.child('seed')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
@@ -39,7 +42,7 @@ export function seedDevData() {
   const feedsPath = path.join(projectRoot, 'src/lib/demo/seed/feeds.json')
   const articlesPath = path.join(projectRoot, 'src/lib/demo/seed/articles.json')
   if (!fs.existsSync(feedsPath) || !fs.existsSync(articlesPath)) {
-    console.warn('[seed] Seed JSON not found, skipping')
+    log.warn('Seed JSON not found, skipping')
     return
   }
 
@@ -107,5 +110,5 @@ export function seedDevData() {
 
   const feedCount = feedsJson.length
   const articleCount = articlesJson.length
-  console.log(`[seed] Dev seed data loaded (${feedCount} feeds, ${articleCount} articles)`)
+  log.info(`Dev seed data loaded (${feedCount} feeds, ${articleCount} articles)`)
 }

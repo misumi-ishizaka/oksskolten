@@ -2,6 +2,9 @@ import { JSDOM } from 'jsdom'
 import { fetchViaFlareSolverr } from './flaresolverr.js'
 import type { RssItem } from './rss.js'
 import { GENERIC_LINK_TEXT } from '../lib/cleaner/boilerplate-text.js'
+import { logger } from '../logger.js'
+
+const log = logger.child('fetcher')
 
 export { GENERIC_LINK_TEXT }
 
@@ -194,7 +197,7 @@ export async function fetchCssSelectorViaFlareSolverr(bridgeUrl: string): Promis
   const doc = dom.window.document
   const anchors = doc.querySelectorAll(params.urlSelector)
 
-  console.log(`[fetcher] CssSelectorBridge FlareSolverr: matched ${anchors.length} anchors with selector "${params.urlSelector}"`)
+  log.info(`CssSelectorBridge FlareSolverr: matched ${anchors.length} anchors with selector "${params.urlSelector}"`)
 
   // First pass: collect article URLs
   const articleUrls = new Set<string>()
@@ -220,7 +223,7 @@ export async function fetchCssSelectorViaFlareSolverr(bridgeUrl: string): Promis
   }
 
   if (items.length === 0) throw new Error('CssSelectorBridge FlareSolverr fallback: no items found')
-  console.log(`[fetcher] CssSelectorBridge FlareSolverr fallback: found ${items.length} items from ${params.homePage}`)
+  log.info(`CssSelectorBridge FlareSolverr fallback: found ${items.length} items from ${params.homePage}`)
   return items
 }
 
