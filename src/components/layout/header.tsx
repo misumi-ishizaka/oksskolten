@@ -18,12 +18,12 @@ export function Header({ mode, onMenuClick, onBack, feedName, detailTitle, isScr
   return (
     <header
       data-header
-      className={`flex items-center px-4 border-b sticky top-0 z-30 backdrop-blur-md select-none transition-colors duration-200 ${
+      className={`flex items-center px-4 border-b sticky top-0 z-30 select-none transition-colors duration-200 ${
         isScrolled ? 'border-border' : 'border-transparent'
       }`}
       style={{
         height: 'var(--header-height)',
-        backgroundColor: 'rgb(var(--color-bg-header-rgb) / 0.8)',
+        backgroundColor: 'rgb(var(--color-bg-header-rgb) / 0.95)',
         paddingTop: 'var(--safe-area-inset-top)',
       }}
     >

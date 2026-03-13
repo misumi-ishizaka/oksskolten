@@ -30,6 +30,7 @@ function Thumbnail({ src, articleUrl, className }: { src: string | null; article
       <img
         src={src}
         alt=""
+        loading="lazy"
         className={`${sizeClass} object-cover rounded shrink-0`}
         onError={() => setFailed(true)}
       />
@@ -44,6 +45,7 @@ function Thumbnail({ src, articleUrl, className }: { src: string | null; article
         <img
           src={`https://www.google.com/s2/favicons?sz=32&domain=${domain}`}
           alt=""
+          loading="lazy"
           width={24}
           height={24}
         />
@@ -70,6 +72,7 @@ function LargeThumbnail({ src, articleUrl }: { src: string | null; articleUrl: s
       <img
         src={src}
         alt=""
+        loading="lazy"
         className="w-full aspect-video object-cover rounded-t"
         onError={() => setFailed(true)}
       />
@@ -84,6 +87,7 @@ function LargeThumbnail({ src, articleUrl }: { src: string | null; articleUrl: s
         <img
           src={`https://www.google.com/s2/favicons?sz=32&domain=${domain}`}
           alt=""
+          loading="lazy"
           width={32}
           height={32}
         />
