@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setupTestDb } from '../__tests__/helpers/testDb.js'
 import { buildApp } from '../__tests__/helpers/buildApp.js'
-import { createFeed, insertArticle } from '../db.js'
+import { createFeed, createCategory, insertArticle, markArticleSeen } from '../db.js'
 import type { FastifyInstance } from 'fastify'
 
 // ---------------------------------------------------------------------------
@@ -354,7 +354,6 @@ describe('GET /api/articles boundary values', () => {
 
 describe('GET /api/articles?category_id', () => {
   it('filters articles by category', async () => {
-    const { createCategory } = await import('../db.js')
     const cat = createCategory('Tech')
     const f1 = seedFeed({ category_id: cat.id, url: 'https://a.com' })
     const f2 = seedFeed({ url: 'https://b.com' })
@@ -386,5 +385,66 @@ describe('GET /api/articles?read=1', () => {
     const res = await app.inject({ method: 'GET', url: '/api/articles?read=1' })
     expect(res.json().articles).toHaveLength(1)
     expect(res.json().articles[0].read_at).not.toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// total_all: distinguish "no articles" from "all read"
+// ---------------------------------------------------------------------------
+
+describe('GET /api/articles?unread=1 — total_all field', () => {
+  it('returns total_all when unread filter yields 0 results but articles exist', async () => {
+    const feed = seedFeed()
+    const artId1 = seedArticle(feed.id)
+    const artId2 = seedArticle(feed.id)
+    markArticleSeen(artId1, true)
+    markArticleSeen(artId2, true)
+
+    const res = await app.inject({ method: 'GET', url: '/api/articles?unread=1' })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().articles).toHaveLength(0)
+    expect(res.json().total).toBe(0)
+    expect(res.json().total_all).toBe(2)
+  })
+
+  it('returns total_all scoped to category_id', async () => {
+    const cat = createCategory('News')
+    const f1 = seedFeed({ category_id: cat.id, url: 'https://a.com' })
+    const f2 = seedFeed({ url: 'https://b.com' })
+    const a1 = seedArticle(f1.id)
+    seedArticle(f2.id) // different category — should not count
+    markArticleSeen(a1, true)
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/articles?unread=1&category_id=${cat.id}`,
+    })
+    expect(res.json().articles).toHaveLength(0)
+    expect(res.json().total_all).toBe(1)
+  })
+
+  it('does not include total_all when there are unread articles', async () => {
+    const feed = seedFeed()
+    seedArticle(feed.id) // unread
+
+    const res = await app.inject({ method: 'GET', url: '/api/articles?unread=1' })
+    expect(res.json().articles).toHaveLength(1)
+    expect(res.json().total_all).toBeUndefined()
+  })
+
+  it('does not include total_all when no articles at all', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/articles?unread=1' })
+    expect(res.json().articles).toHaveLength(0)
+    expect(res.json().total).toBe(0)
+    // total_all is 0, so it should still be included (to confirm "truly empty")
+    expect(res.json().total_all).toBe(0)
+  })
+
+  it('does not include total_all for non-unread queries', async () => {
+    const feed = seedFeed()
+    seedArticle(feed.id)
+
+    const res = await app.inject({ method: 'GET', url: '/api/articles' })
+    expect(res.json().total_all).toBeUndefined()
   })
 })
