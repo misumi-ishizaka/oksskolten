@@ -598,6 +598,18 @@ const dict = {
   'chat.modelDesc': { ja: 'チャットで使用するAIモデル', en: 'AI model used for chat' },
   'chat.provider': { ja: 'チャットプロバイダー', en: 'Chat provider' },
   'chat.providerDesc': { ja: 'チャットで使用するプロバイダー', en: 'Provider used for chat' },
+  // Command Palette
+  'command.navigation': { ja: 'ナビゲーション', en: 'Navigation' },
+  'command.actions': { ja: 'アクション', en: 'Actions' },
+  'command.feeds': { ja: 'フィード', en: 'Feeds' },
+  'command.appearance': { ja: '外観', en: 'Appearance' },
+  'command.placeholder': { ja: 'コマンドを入力...', en: 'Type a command or search...' },
+  'command.noResults': { ja: '結果が見つかりません', en: 'No results found.' },
+  'command.searchArticles': { ja: '記事を検索', en: 'Search articles' },
+  'command.addFeed': { ja: 'フィードを追加', en: 'Add new feed' },
+  'command.importOpml': { ja: 'OPML インポート', en: 'Import OPML' },
+  'command.exportOpml': { ja: 'OPML エクスポート', en: 'Export OPML' },
+
   'summary.settings': { ja: '要約', en: 'Summary' },
   'summary.settingsDesc': { ja: '要約で使用するプロバイダーとモデル', en: 'Provider and model for summary' },
   'summary.model': { ja: '要約モデル', en: 'Summary model' },

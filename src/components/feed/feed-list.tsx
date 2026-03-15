@@ -4,7 +4,7 @@ import useSWR from 'swr'
 import { fetcher } from '../../lib/fetcher'
 import { useI18n } from '../../lib/i18n'
 import { MD_BREAKPOINT } from '../../lib/breakpoints'
-import { Inbox, Plus, ChevronRight, Bookmark, ThumbsUp, Clock, Paperclip, Search, Command, AlertTriangle, MessagesSquare } from 'lucide-react'
+import { Inbox, Plus, ChevronRight, Bookmark, ThumbsUp, Clock, Paperclip, Search, Command, ArrowBigUp, AlertTriangle, MessagesSquare } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { useFetchProgressContext } from '../../contexts/fetch-progress-context'
@@ -21,6 +21,8 @@ import { SidebarMenu } from '../layout/sidebar-menu'
 import { SidebarNavItem } from '../layout/sidebar-nav-item'
 import { FeedListHeader } from './feed-list-header'
 import { SearchDialog } from '../ui/search-dialog'
+import { CommandPalette } from '../command-palette'
+import { useGlobalShortcuts } from '../../hooks/use-global-shortcuts'
 import { useAppLayout } from '../../app'
 import { extractDomain } from '../../lib/url'
 import type { FeedWithCounts, Category } from '../../../shared/types'
@@ -79,17 +81,13 @@ export function FeedList({ isOpen, onClose, onBackdropClose, onCollapse, onMarkA
 
   const [feedModalOpen, setFeedModalOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [commandOpen, setCommandOpen] = useState(false)
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(open => !open)
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  useGlobalShortcuts({
+    onCommandPalette: () => setCommandOpen(true),
+    onSearch: () => setSearchOpen(true),
+    onAddFeed: () => setFeedModalOpen(true),
+  })
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -476,7 +474,7 @@ export function FeedList({ isOpen, onClose, onBackdropClose, onCollapse, onMarkA
           <SidebarNavItem icon={Inbox} label={t('feeds.inbox')} selected={isInbox && selectedFeedId === null} onClick={() => { void navigate('/inbox'); onClose() }} badge={totalUnread > 0 ? <UnreadBadge count={totalUnread} /> : undefined} />
 
           <SidebarNavItem icon={Search} label={t('search.title')} onClick={() => setSearchOpen(true)} className="group/search">
-            <kbd className="hidden md:inline-flex text-[11px] text-muted bg-hover px-1.5 py-1 rounded opacity-0 group-hover/search:opacity-100 transition-opacity items-center gap-0"><span className="w-2.5 h-3 inline-flex items-center justify-center"><Command className="w-2.5 h-2.5" /></span><span className="w-3 h-3 inline-flex items-center justify-center leading-none">K</span></kbd>
+            <kbd className="hidden md:inline-flex text-[11px] text-muted bg-hover px-1.5 py-1 rounded opacity-0 group-hover/search:opacity-100 transition-opacity items-center gap-0"><span className="w-2.5 h-3 inline-flex items-center justify-center"><Command className="w-2.5 h-2.5" /></span><span className="w-3 h-3 inline-flex items-center justify-center"><ArrowBigUp className="w-2.5 h-2.5" /></span><span className="w-3 h-3 inline-flex items-center justify-center leading-none">K</span></kbd>
           </SidebarNavItem>
 
           <SidebarNavItem icon={Bookmark} label={t('feeds.bookmarks')} selected={isBookmarks} onClick={() => { void navigate('/bookmarks'); onClose() }} badge={(feedsData?.bookmark_count ?? 0) > 0 ? <UnreadBadge count={feedsData!.bookmark_count} /> : undefined} />
@@ -545,6 +543,13 @@ export function FeedList({ isOpen, onClose, onBackdropClose, onCollapse, onMarkA
       )}
 
       {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}
+
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        onOpenSearch={() => setSearchOpen(true)}
+        onOpenAddFeed={() => setFeedModalOpen(true)}
+      />
 
       {bulkDeleteConfirm && (
         <ConfirmDialog
