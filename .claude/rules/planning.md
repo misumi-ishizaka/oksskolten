@@ -10,8 +10,8 @@ Before presenting a plan to the user, review it with the `codex` command. Adjust
 
 ```bash
 # Initial plan review
-codex exec -m gpt-5.3-codex "Review this plan. Don't nitpick trivial things. Only flag critical issues: {plan_full_path} (ref: {CLAUDE.md full_path})"
+codex exec -m gpt-5.4-codex "Review this plan. Don't nitpick trivial things. Only flag critical issues: {plan_full_path} (ref: {CLAUDE.md full_path})"
 
 # Updated plan review (resume --last preserves prior review context)
-codex exec resume --last -m gpt-5.3-codex "Plan updated. Review again. Don't nitpick trivial things. Only flag critical issues: {plan_full_path} (ref: {CLAUDE.md full_path})"
+codex exec resume --last -m gpt-5.4-codex "Plan updated. Review again. Don't nitpick trivial things. Only flag critical issues: {plan_full_path} (ref: {CLAUDE.md full_path})"
 ```
