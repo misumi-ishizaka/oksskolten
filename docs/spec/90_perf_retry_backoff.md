@@ -1,12 +1,12 @@
-# Exponential Backoff for Article Retry
+# Oksskolten Spec — Exponential Backoff for Article Retry
+
+> [Back to overview](./01_overview.md)
 
 ## Background
 
 The cron job running every 5 minutes retries all articles with `last_error IS NOT NULL` and missing body text, without any limit. This causes CPU usage to spike to 99% even when there are zero new articles.
 
-## Current Problem
-
-`getRetryArticles()` in `server/db/articles.ts` uses the following query to select retry candidates:
+`getRetryArticles()` in `server/db/articles.ts` previously used the following query to select retry candidates:
 
 ```sql
 SELECT * FROM articles
@@ -101,17 +101,18 @@ WHERE last_error IS NOT NULL AND full_text IS NULL
 ```
 
 Example output:
-```
+
+```text
 [fetcher] Retry: 2 eligible, 3 backoff-waiting, 1 exceeded max attempts
 ```
 
-Log level: `info`. Individual article URLs/IDs are not logged (counts only).
+Log level: `info`. Individual article URLs/IDs are not logged (counts only). When all counts are zero, the log line is suppressed to reduce noise.
 
 ### Processing Flow
 
 Phase B retry article processing is modified as follows:
 
-1. **Log aggregation**: Call `getRetryStats()` to log retry status
+1. **Log aggregation**: Call `getRetryStats()` and log retry status (suppressed when all counts are zero)
 2. **Fetch retry candidates**: Call `getRetryArticles()` to get eligible articles
 3. **Before each retry**: Update `updateArticleContent(id, { last_retry_at: now })` before calling `processArticle()`
 4. **On success**: The existing `updateArticleContent(id, { last_error: null, full_text: ..., ... })` works as-is. `retry_count` is not reset (the article exits the retry pool because `last_error IS NOT NULL` no longer matches)
@@ -119,20 +120,22 @@ Phase B retry article processing is modified as follows:
 
 `updateArticleContent()` is a generic function that dynamically updates fields. Adding `retry_count?: number` and `last_retry_at?: string | null` to its data parameter type is sufficient.
 
-## Target Files
+### Key Files
 
-- `migrations/0005_retry_backoff.sql` — Schema changes
-- `server/fetcher/util.ts` — `RETRY_MAX_ATTEMPTS`, `RETRY_BATCH_LIMIT` constants
-- `server/db/articles.ts` — `getRetryArticles()` query update, `getRetryStats()` addition, `updateArticleContent()` type extension
-- `server/fetcher.ts` — Phase B retry processing (last_retry_at update, retry_count increment, log output)
-- `server/db/articles.test.ts` — getRetryArticles / getRetryStats query tests
-- `server/fetcher.test.ts` — Phase B integration tests
-- `docs/spec/90_perf_retry_backoff.md` — English spec (this file)
-- `docs/spec/10_schema.ja.md` / `docs/spec/10_schema.md` — Add columns to articles table documentation
+| File | Description |
+|------|-------------|
+| `migrations/0005_retry_backoff.sql` | Schema changes — add `retry_count` and `last_retry_at` columns |
+| `server/fetcher/util.ts` | `RETRY_MAX_ATTEMPTS`, `RETRY_BATCH_LIMIT` constants |
+| `server/db/articles.ts` | `getRetryArticles()` query update, `getRetryStats()` addition, `updateArticleContent()` type extension |
+| `server/fetcher.ts` | Phase B retry processing (last_retry_at update, retry_count increment, log output) |
+| `server/db/articles.test.ts` | getRetryArticles / getRetryStats query tests |
+| `server/fetcher.test.ts` | Phase B integration tests |
+| `shared/types.ts` | `retry_count` and `last_retry_at` fields added to `Article` interface |
+| `docs/spec/10_schema.ja.md` / `10_schema.md` | Articles table column documentation |
 
-## Test Plan
+### Test Plan
 
-### DB Query Tests (`server/db/articles.test.ts`)
+DB query tests (`server/db/articles.test.ts`):
 
 - `getRetryArticles()` returns only articles with `retry_count < max_attempts`
 - Articles within backoff period are excluded
@@ -142,42 +145,21 @@ Phase B retry article processing is modified as follows:
 - Partially fetched articles (`full_text` non-NULL, `last_error` non-NULL) are excluded from retry
 - `getRetryStats()` correctly aggregates eligible / backoff_waiting / exceeded counts
 
-### Fetcher Integration Tests (`server/fetcher.test.ts`)
+Fetcher integration tests (`server/fetcher.test.ts`):
 
 - `retry_count` is incremented on failure
 - `last_error` is set to NULL on success
 - `last_retry_at` is updated before `processArticle()` is called
 
-## Out of Scope
+### Out of Scope
 
 - Admin UI for retry reset
 - API endpoint for listing retry-eligible articles
 - Translation/summarization retry (these are on-demand processes requiring a separate mechanism)
 - Reprocessing articles with partially fetched `full_text`
 
-## Expected Impact
+### Expected Impact
 
 - No CPU spikes during cron runs with zero new articles
 - Permanently unfetchable articles stop consuming resources
 - Graduated backoff intervals still allow recovery from temporary failures
-
-## Current Status
-
-Implementation ready. Implementors MUST keep this section updated as they work.
-
-### Checklist
-
-- [ ] `migrations/0005_retry_backoff.sql` — Add `retry_count`, `last_retry_at` columns
-- [ ] `server/fetcher/util.ts` — Define `RETRY_MAX_ATTEMPTS`, `RETRY_BATCH_LIMIT` constants
-- [ ] `server/db/articles.ts` — Update `getRetryArticles()` query
-- [ ] `server/db/articles.ts` — Add `getRetryStats()` aggregation function
-- [ ] `server/db/articles.ts` — Extend `updateArticleContent()` type (`retry_count`, `last_retry_at`)
-- [ ] `server/fetcher.ts` — Modify Phase B retry processing (last_retry_at update, retry_count increment, log output)
-- [ ] `server/db/articles.test.ts` — getRetryArticles / getRetryStats tests
-- [ ] `server/fetcher.test.ts` — Phase B integration tests
-- [ ] `docs/spec/10_schema.ja.md` / `10_schema.md` — Add columns to articles table documentation
-- [ ] `docs/spec/90_perf_retry_backoff.md` — English spec
-
-### Updates
-
-- 2026-03-19: Spec interview completed. All design decisions finalized.
