@@ -2,6 +2,7 @@ import {
   getEnabledFeeds,
   getExistingArticleUrls,
   getRetryArticles,
+  getRetryStats,
   insertArticle,
   updateArticleContent,
   updateFeedError,
@@ -125,7 +126,8 @@ interface RetryArticle {
 
 type ArticleTask = NewArticle | RetryArticle
 
-async function processArticle(task: ArticleTask): Promise<void> {
+/** Returns true if the retry article still has an error after processing. */
+async function processArticle(task: ArticleTask): Promise<boolean> {
   const articleUrl = task.kind === 'new' ? task.url : task.article.url
 
   const content = await fetchArticleContent(articleUrl, {
@@ -169,6 +171,7 @@ async function processArticle(task: ArticleTask): Promise<void> {
       last_error: content.lastError,
     })
   }
+  return !!content.lastError
 }
 
 // --- Single feed fetch ---
@@ -338,9 +341,14 @@ export async function fetchAllFeeds(
     ),
   )
 
-  // Phase B: Add retry candidates
+  // Phase B: Add retry candidates with backoff
+  const retryStats = getRetryStats()
+  if (retryStats.eligible > 0 || retryStats.backoff_waiting > 0 || retryStats.exceeded > 0) {
+    log.info(`Retry: ${retryStats.eligible} eligible, ${retryStats.backoff_waiting} backoff-waiting, ${retryStats.exceeded} exceeded max attempts`)
+  }
   const retryArticles = getRetryArticles()
   for (const article of retryArticles) {
+    updateArticleContent(article.id, { last_retry_at: new Date().toISOString() })
     allTasks.push({ kind: 'retry', article })
   }
 
@@ -371,10 +379,25 @@ export async function fetchAllFeeds(
   await Promise.all(
     allTasks.map(task =>
       processingSemaphore.run(async () => {
+        let retryFailed = false
         try {
-          await processArticle(task)
+          retryFailed = await processArticle(task)
         } catch (err) {
           log.error('Article error:', err)
+          retryFailed = true
+          if (task.kind === 'retry') {
+            const msg = err instanceof Error ? err.message : String(err)
+            updateArticleContent(task.article.id, {
+              last_error: msg,
+            })
+          }
+        }
+        // Single place where retry_count is incremented — covers both
+        // the returned-error path and the thrown-exception path.
+        if (task.kind === 'retry' && retryFailed) {
+          updateArticleContent(task.article.id, {
+            retry_count: (task.article.retry_count ?? 0) + 1,
+          })
         }
         if (task.kind === 'new') {
           const feedId = task.feed_id
