@@ -100,6 +100,29 @@ export function FeedContextMenu({
   )
 }
 
+interface InboxMenuProps {
+  children: ReactNode
+  onMarkAllRead: () => void
+}
+
+export function InboxContextMenu({ children, onMarkAllRead }: InboxMenuProps) {
+  const { t } = useI18n()
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        {children}
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={onMarkAllRead}>
+          <CheckCheck size={16} strokeWidth={1.5} />
+          {t('feeds.markInboxAllRead')}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  )
+}
+
 interface MultiSelectMenuProps {
   children: ReactNode
   selectedCount: number

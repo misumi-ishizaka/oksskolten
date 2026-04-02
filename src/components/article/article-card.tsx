@@ -6,6 +6,7 @@ import { extractDomain, articleUrlToPath } from '../../lib/url'
 import { formatDate, formatRelativeDate } from '../../lib/dateFormat'
 import type { ArticleListItem } from '../../../shared/types'
 import type { LayoutName } from '../../data/layouts'
+import { SummaryInline } from './summary-inline'
 
 export interface ArticleDisplayConfig {
   dateMode: 'relative' | 'absolute'
@@ -157,6 +158,7 @@ function ListCard({ article, dateMode, indicatorStyle, showUnreadIndicator, show
               {article.excerpt}
             </p>
           )}
+          <SummaryInline summary={article.summary} />
           <div className="flex items-center gap-1 text-[12px] text-muted mt-1 whitespace-nowrap min-w-0">
             {domain && (
               <>
@@ -205,6 +207,7 @@ function GridCard({ article, dateMode, showThumbnails, onClick }: ArticleCardPro
             {article.excerpt}
           </p>
         )}
+        <SummaryInline summary={article.summary} />
         <div className="flex items-center gap-1 text-[11px] text-muted mt-2">
           {domain && (
             <>
@@ -251,6 +254,7 @@ function HeroCard({ article, dateMode, showThumbnails, onClick }: ArticleCardPro
             {article.excerpt}
           </p>
         )}
+        <SummaryInline summary={article.summary} />
         <div className="flex items-center gap-1 text-[12px] text-muted mt-2">
           {domain && (
             <>
@@ -297,6 +301,7 @@ function SmallCard({ article, dateMode, showThumbnails, onClick }: ArticleCardPr
             {article.excerpt}
           </p>
         )}
+        <SummaryInline summary={article.summary} />
         <div className="flex items-center gap-1 text-[11px] text-muted mt-1 whitespace-nowrap min-w-0">
           {domain && (
             <>

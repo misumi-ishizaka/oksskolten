@@ -22,8 +22,8 @@ export function detectLanguage(fullText: string): string {
 }
 
 
-function buildSummarizePrompt(fullText: string): string {
-  const lang = getSetting('general.language') || DEFAULT_LANGUAGE
+function buildSummarizePrompt(fullText: string, langOverride?: string): string {
+  const lang = langOverride ?? getSetting('general.language') ?? DEFAULT_LANGUAGE
   return `Summarize the following article in ${languageName(lang)}. Follow the format strictly.
 
 ## Format
@@ -100,6 +100,23 @@ const summarizeConfig: AiTaskConfig = {
   defaultModel: TASK_DEFAULTS.summarize.model,
   maxTokens: SUMMARIZE_MAX_TOKENS,
   buildPrompt: buildSummarizePrompt,
+}
+
+const AUTO_SUMMARIZE_DEFAULT_CHARS = 3000
+
+export async function autoSummarizeArticle(fullText: string): Promise<{ summary: string } & AiTextResult> {
+  const lang = getSetting('summary.auto_lang') || 'ja'
+  const chars = parseInt(getSetting('summary.auto_chars') || String(AUTO_SUMMARIZE_DEFAULT_CHARS), 10)
+  const truncated = fullText.slice(0, isNaN(chars) || chars < 1 ? AUTO_SUMMARIZE_DEFAULT_CHARS : chars)
+  const config: AiTaskConfig = {
+    providerKey: 'summary.provider',
+    modelKey: 'summary.model',
+    defaultModel: TASK_DEFAULTS.summarize.model,
+    maxTokens: SUMMARIZE_MAX_TOKENS,
+    buildPrompt: (text) => buildSummarizePrompt(text, lang),
+  }
+  const r = await runAiTask(config, truncated)
+  return { summary: r.text, inputTokens: r.inputTokens, outputTokens: r.outputTokens, billingMode: r.billingMode, model: r.model }
 }
 
 const translateConfig: AiTaskConfig = {

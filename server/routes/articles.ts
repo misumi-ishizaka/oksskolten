@@ -11,6 +11,7 @@ import {
   getArticlesByIds,
   markArticleSeen,
   markArticlesSeen,
+  markAllSeenInbox,
   recordArticleRead,
   markArticleBookmarked,
   markArticleLiked,
@@ -420,6 +421,14 @@ export async function articleRoutes(api: FastifyInstance): Promise<void> {
         reply.status(404).send({ error: 'Article not found' })
         return
       }
+      reply.send(result)
+    },
+  )
+
+  api.post(
+    '/api/articles/mark-all-seen',
+    async (_request, reply) => {
+      const result = markAllSeenInbox()
       reply.send(result)
     },
   )

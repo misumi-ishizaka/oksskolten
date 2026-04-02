@@ -1,4 +1,5 @@
 import {
+  getSetting,
   getEnabledFeeds,
   getExistingArticleUrls,
   getRetryArticles,
@@ -19,7 +20,7 @@ import { type FetchProgressEvent, emitProgress, markFeedDone } from './fetcher/p
 import { fetchFullText, isBotBlockPage, convertHtmlToMarkdown, markdownToExcerpt, MIN_EXTRACTED_LENGTH } from './fetcher/content.js'
 import { type FetchRssResult, fetchAndParseRss, RateLimitError } from './fetcher/rss.js'
 import { computeInterval, computeEmpiricalInterval, sqliteFuture, DEFAULT_INTERVAL } from './fetcher/schedule.js'
-import { detectLanguage } from './fetcher/ai.js'
+import { detectLanguage, autoSummarizeArticle } from './fetcher/ai.js'
 import { logger } from './logger.js'
 
 const log = logger.child('fetcher')
@@ -166,6 +167,17 @@ async function processArticle(task: ArticleTask): Promise<boolean> {
       })
       // Fire-and-forget: detect similar articles asynchronously
       void detectAndStoreSimilarArticles(articleId, task.title, task.feed_id, task.published_at)
+      // Fire-and-forget: auto-summarize new articles if enabled
+      if (content.fullText && getSetting('summary.auto_enabled') === 'on') {
+        void (async () => {
+          try {
+            const { summary } = await autoSummarizeArticle(content.fullText!)
+            updateArticleContent(articleId, { summary })
+          } catch (err) {
+            log.warn(`Auto-summarize failed for ${task.url}: ${errorMessage(err)}`)
+          }
+        })()
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (!msg.includes('UNIQUE constraint failed')) {

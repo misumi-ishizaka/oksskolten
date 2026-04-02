@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import useSWR from 'swr'
-import { fetcher } from '../../lib/fetcher'
+import { fetcher, apiPost } from '../../lib/fetcher'
 import { useI18n } from '../../lib/i18n'
 import { MD_BREAKPOINT } from '../../lib/breakpoints'
 import { Inbox, Plus, ChevronRight, Bookmark, ThumbsUp, Clock, Paperclip, Search, Command, ArrowBigUp, AlertTriangle, MessagesSquare } from 'lucide-react'
@@ -16,7 +16,7 @@ import { useFeedBulkActions } from '../../hooks/use-feed-bulk-actions'
 import { useClipFeedId } from '../../hooks/use-clip-feed-id'
 import { FeedModal } from './feed-modal'
 import { ConfirmDialog } from '../ui/confirm-dialog'
-import { FeedContextMenu, MultiSelectContextMenu, CategoryContextMenu } from './feed-context-menu'
+import { FeedContextMenu, MultiSelectContextMenu, CategoryContextMenu, InboxContextMenu } from './feed-context-menu'
 import { SidebarMenu } from '../layout/sidebar-menu'
 import { SidebarNavItem } from '../layout/sidebar-nav-item'
 import { FeedListHeader } from './feed-list-header'
@@ -213,6 +213,12 @@ export function FeedList({ isOpen, onClose, onBackdropClose, onCollapse, onMarkA
   const showFeedActivity = settings.showFeedActivity
 
   const totalUnread = feeds.reduce((sum, f) => sum + (f.disabled || f.type === 'clip' ? 0 : f.unread_count), 0)
+
+  async function handleMarkAllReadInbox() {
+    await apiPost('/api/articles/mark-all-seen')
+    void mutateFeeds()
+    onMarkAllRead?.()
+  }
 
   function selectFeed(id: number | null) {
     if (id) {
@@ -471,7 +477,9 @@ export function FeedList({ isOpen, onClose, onBackdropClose, onCollapse, onMarkA
         <FeedListHeader onClose={onClose} onCollapse={onCollapse} />
 
         <nav className="flex-1 overflow-y-auto overscroll-contain py-2 px-2">
-          <SidebarNavItem icon={Inbox} label={t('feeds.inbox')} selected={isInbox && selectedFeedId === null} onClick={() => { void navigate('/inbox'); onClose() }} badge={totalUnread > 0 ? <UnreadBadge count={totalUnread} /> : undefined} />
+          <InboxContextMenu onMarkAllRead={() => { void handleMarkAllReadInbox() }}>
+            <SidebarNavItem icon={Inbox} label={t('feeds.inbox')} selected={isInbox && selectedFeedId === null} onClick={() => { void navigate('/inbox'); onClose() }} badge={totalUnread > 0 ? <UnreadBadge count={totalUnread} /> : undefined} />
+          </InboxContextMenu>
 
           <SidebarNavItem icon={Search} label={t('search.title')} onClick={() => setSearchOpen(true)} className="group/search">
             <kbd className="hidden md:inline-flex text-[11px] text-muted bg-hover px-1.5 py-1 rounded opacity-0 group-hover/search:opacity-100 transition-opacity items-center gap-0"><span className="w-2.5 h-3 inline-flex items-center justify-center"><Command className="w-2.5 h-2.5" /></span><span className="w-3 h-3 inline-flex items-center justify-center"><ArrowBigUp className="w-2.5 h-2.5" /></span><span className="w-3 h-3 inline-flex items-center justify-center leading-none">K</span></kbd>

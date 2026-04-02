@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 
-interface SidebarNavItemProps {
+interface SidebarNavItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon: LucideIcon
   label: string
   selected?: boolean
@@ -10,9 +10,10 @@ interface SidebarNavItemProps {
   children?: React.ReactNode
 }
 
-export function SidebarNavItem({ icon: Icon, label, selected, badge, onClick, className, children }: SidebarNavItemProps) {
+export function SidebarNavItem({ icon: Icon, label, selected, badge, onClick, className, children, ...rest }: SidebarNavItemProps) {
   return (
     <button
+      {...rest}
       onClick={onClick}
       className={`w-full text-left px-2 py-1.5 rounded-lg text-sm flex items-center justify-between outline-none transition-colors hover:bg-hover-sidebar ${
         selected ? 'font-medium text-accent' : (className ?? 'text-text')

@@ -142,6 +142,34 @@ export function TaskModelSection({ settings, t }: { settings: Settings; t: TFunc
         <p className="text-xs text-muted mt-2">{t('integration.taskSettingsNoKeys')}</p>
       )}
 
+      <div className="mt-4 p-3 rounded-lg bg-bg-card border border-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <span className="block text-xs font-medium text-text select-none">{t('summary.autoEnabled')}</span>
+            <p className="text-[11px] text-muted mt-0.5 leading-relaxed">{t('summary.autoEnabledDesc')}</p>
+          </div>
+          <div className="flex rounded-md bg-bg-subtle p-0.5 shrink-0">
+            {(['on', 'off'] as const).map(val => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => settings.setSummaryAutoEnabled(val)}
+                disabled={!keysLoading && !hasAnyLlmKey}
+                className={`px-3 py-1 text-[11px] rounded transition-colors select-none ${
+                  settings.summaryAutoEnabled === val
+                    ? 'bg-accent text-accent-text font-medium shadow-sm'
+                    : !keysLoading && !hasAnyLlmKey
+                      ? 'text-muted/40 cursor-not-allowed'
+                      : 'text-muted hover:text-text'
+                }`}
+              >
+                {val === 'on' ? t('settings.unreadIndicatorOn') : t('settings.unreadIndicatorOff')}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
     </section>
   )
 }

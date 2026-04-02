@@ -16,6 +16,7 @@ const dict = {
   // FeedList
   'feeds.title': { ja: 'フィード', en: 'Feeds' },
   'feeds.inbox': { ja: 'Inbox', en: 'Inbox' },
+  'feeds.markInboxAllRead': { ja: 'Inbox をすべて既読にする', en: 'Mark all Inbox as read' },
   'feeds.add': { ja: 'フィード', en: 'Feed' },
   'feeds.theme': { ja: 'テーマ', en: 'Theme' },
   'feeds.colorMode': { ja: 'カラーモード', en: 'Color mode' },
@@ -663,6 +664,14 @@ const dict = {
   'command.addFeed': { ja: 'フィードを追加', en: 'Add new feed' },
   'command.importOpml': { ja: 'OPML インポート', en: 'Import OPML' },
   'command.exportOpml': { ja: 'OPML エクスポート', en: 'Export OPML' },
+
+  // Article list — inline auto-summary
+  'article.autoSummary': { ja: 'AI要約', en: 'AI Summary' },
+  'article.hideSummary': { ja: '折りたたむ', en: 'Collapse' },
+
+  // Settings — auto-summarize
+  'summary.autoEnabled': { ja: '新着記事を自動で日本語要約', en: 'Auto-summarize new articles' },
+  'summary.autoEnabledDesc': { ja: '新しい記事を検出したとき、本文前半を読み込んで自動で要約します。AIプロバイダーとAPIキーの設定が必要です', en: 'When a new article is detected, automatically reads the first part and generates a summary. Requires an AI provider and API key' },
 
   'summary.settings': { ja: '要約', en: 'Summary' },
   'summary.settingsDesc': { ja: '要約で使用するプロバイダーとモデル', en: 'Provider and model for summary' },

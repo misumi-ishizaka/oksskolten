@@ -274,6 +274,17 @@ export function markAllSeenByFeed(feedId: number): { updated: number } {
   return { updated: result.changes }
 }
 
+export function markAllSeenInbox(): { updated: number } {
+  const affectedIds = (getDb().prepare(
+    'SELECT id FROM active_articles WHERE seen_at IS NULL',
+  ).all() as { id: number }[]).map(r => r.id)
+  const result = getDb().prepare("UPDATE articles SET seen_at = datetime('now') WHERE seen_at IS NULL AND purged_at IS NULL").run()
+  if (affectedIds.length > 0) {
+    syncArticleFiltersToSearch(affectedIds.map(id => ({ id, is_unread: false })))
+  }
+  return { updated: result.changes }
+}
+
 export function markArticleLiked(
   id: number,
   liked: boolean,
