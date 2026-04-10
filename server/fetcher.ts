@@ -137,8 +137,16 @@ interface RetryArticle {
 
 type ArticleTask = NewArticle | RetryArticle
 
-/** Returns true if the retry article still has an error after processing. */
-async function processArticle(task: ArticleTask): Promise<boolean> {
+/** Maximum time (ms) to wait for auto-summarize before emitting feed-complete. */
+const AUTO_SUMMARIZE_TIMEOUT_MS = 60_000
+
+interface ProcessResult {
+  hasError: boolean
+  /** Resolves when auto-summarize completes (or times out / errors). Null when not applicable. */
+  summaryPromise: Promise<void> | null
+}
+
+async function processArticle(task: ArticleTask): Promise<ProcessResult> {
   const articleUrl = task.kind === 'new' ? task.url : task.article.url
 
   const content = await fetchArticleContent(articleUrl, {
@@ -167,9 +175,10 @@ async function processArticle(task: ArticleTask): Promise<boolean> {
       })
       // Fire-and-forget: detect similar articles asynchronously
       void detectAndStoreSimilarArticles(articleId, task.title, task.feed_id, task.published_at)
-      // Fire-and-forget: auto-summarize new articles if enabled
+      // Auto-summarize: return promise so callers can await before feed-complete
+      let summaryPromise: Promise<void> | null = null
       if (content.fullText && getSetting('summary.auto_enabled') === 'on') {
-        void (async () => {
+        const work = (async () => {
           try {
             const { summary } = await autoSummarizeArticle(content.fullText!)
             updateArticleContent(articleId, { summary })
@@ -177,12 +186,23 @@ async function processArticle(task: ArticleTask): Promise<boolean> {
             log.warn(`Auto-summarize failed for ${task.url}: ${errorMessage(err)}`)
           }
         })()
+        // Race against a timeout that resolves (not rejects) so feed-complete is never blocked.
+        // If the AI responds after the timeout, updateArticleContent still runs in the background.
+        const timeout = new Promise<void>(resolve =>
+          setTimeout(() => {
+            log.warn(`Auto-summarize timed out for ${task.url}`)
+            resolve()
+          }, AUTO_SUMMARIZE_TIMEOUT_MS),
+        )
+        summaryPromise = Promise.race([work, timeout])
       }
+      return { hasError: !!content.lastError, summaryPromise }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (!msg.includes('UNIQUE constraint failed')) {
         log.warn(`insertArticle failed for ${task.url}: ${msg}`)
       }
+      return { hasError: true, summaryPromise: null }
     }
   } else {
     updateArticleContent(task.article.id, {
@@ -192,8 +212,8 @@ async function processArticle(task: ArticleTask): Promise<boolean> {
       og_image: content.ogImage,
       last_error: content.lastError,
     })
+    return { hasError: !!content.lastError, summaryPromise: null }
   }
-  return !!content.lastError
 }
 
 // --- Single feed fetch ---
@@ -264,11 +284,13 @@ export async function fetchSingleFeed(
   onProgress?.(foundEvent)
 
   log.info(`Feed ${feed.name}: processing ${total} articles`)
+  const summaryPromises: Promise<void>[] = []
   await Promise.all(
     tasks.map(task =>
       semaphore.run(async () => {
         try {
-          await processArticle(task)
+          const result = await processArticle(task)
+          if (result.summaryPromise) summaryPromises.push(result.summaryPromise)
           if (task.kind === 'new') {
             fetched++
             const doneEvent: FetchProgressEvent = { type: 'article-done', feed_id: feed.id, fetched, total }
@@ -287,6 +309,10 @@ export async function fetchSingleFeed(
       }),
     ),
   )
+
+  // Wait for all auto-summarize calls to complete before feed-complete, so that
+  // the frontend revalidation triggered by feed-complete sees the summaries in the DB.
+  await Promise.allSettled(summaryPromises)
 
   const completeEvent: FetchProgressEvent = { type: 'feed-complete', feed_id: feed.id }
   markFeedDone(feed.id)
@@ -399,12 +425,15 @@ export async function fetchAllFeeds(
   // Per-feed counters for progress (only count 'new' articles)
   const feedFetchedCounts = new Map<number, number>()
   const processingSemaphore = new Semaphore(CONCURRENCY)
+  const summaryPromises: Promise<void>[] = []
   await Promise.all(
     allTasks.map(task =>
       processingSemaphore.run(async () => {
         let retryFailed = false
         try {
-          retryFailed = await processArticle(task)
+          const result = await processArticle(task)
+          retryFailed = result.hasError
+          if (result.summaryPromise) summaryPromises.push(result.summaryPromise)
         } catch (err) {
           log.error('Article error:', err)
           retryFailed = true
@@ -435,6 +464,9 @@ export async function fetchAllFeeds(
       }),
     ),
   )
+
+  // Wait for all auto-summarize calls to complete before feed-complete.
+  await Promise.allSettled(summaryPromises)
 
   // Emit feed-complete for each feed
   for (const [feedId, count] of feedNewCounts) {
